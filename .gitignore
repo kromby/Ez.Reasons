@@ -52,3 +52,14 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Node
+node_modules/
+.next/
+out/
+
+# Azure Functions
+local.settings.json
+
+# SWA CLI
+.swa/

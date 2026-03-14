@@ -1,0 +1,9 @@
+{
+  "configurations": {
+    "default": {
+      "appLocation": "src/frontend",
+      "outputLocation": "out",
+      "apiLocation": "src/api"
+    }
+  }
+}
