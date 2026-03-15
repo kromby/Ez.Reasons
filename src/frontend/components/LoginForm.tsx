@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
+import { login as apiLogin } from "@/lib/api";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -25,18 +26,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Rangt notendanafn eða lykilorð.");
-      }
-
-      const data = await res.json();
+      const data = await apiLogin(username.trim(), password);
       login(data.token);
       onSuccess();
     } catch (err) {

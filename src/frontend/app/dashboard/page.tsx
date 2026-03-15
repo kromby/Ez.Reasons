@@ -3,14 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-
-interface PendingLetter {
-  id: string;
-  title: string;
-  body: string;
-  email: string;
-  submittedAt: string;
-}
+import {
+  fetchPendingLetters,
+  moderateLetter,
+  ApiError,
+  type PendingLetter,
+  type ModerationAction,
+} from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -29,25 +28,13 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/moderation/pending", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Auth-Token": token!,
-        },
-      });
-
-      if (res.status === 401) {
+      const data = await fetchPendingLetters(token!);
+      setLetters(data);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
         handleUnauthorized();
         return;
       }
-
-      if (!res.ok) {
-        throw new Error("Villa við að sækja bréf.");
-      }
-
-      const data: PendingLetter[] = await res.json();
-      setLetters(data);
-    } catch (err) {
       setError(
         err instanceof Error ? err.message : "Villa við að sækja bréf."
       );
@@ -64,28 +51,16 @@ export default function DashboardPage() {
     fetchPending();
   }, [isAuthenticated, router, fetchPending]);
 
-  const handleAction = async (id: string, action: "approve" | "reject") => {
+  const handleAction = async (id: string, action: ModerationAction) => {
     setActionLoading(id);
     try {
-      const res = await fetch(`/api/moderation/${id}/${action}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Auth-Token": token!,
-        },
-      });
-
-      if (res.status === 401) {
+      await moderateLetter(id, action, token!);
+      setLetters((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
         handleUnauthorized();
         return;
       }
-
-      if (!res.ok) {
-        throw new Error("Villa við aðgerð.");
-      }
-
-      setLetters((prev) => prev.filter((l) => l.id !== id));
-    } catch (err) {
       setError(err instanceof Error ? err.message : "Villa við aðgerð.");
     } finally {
       setActionLoading(null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendFeedback, type FeedbackType } from "@/lib/api";
 
 interface FeedbackPromptProps {
   letterId: string;
@@ -13,14 +14,10 @@ export default function FeedbackPrompt({
 }: FeedbackPromptProps) {
   const [submitting, setSubmitting] = useState(false);
 
-  const sendFeedback = async (type: "like" | "dislike") => {
+  const handleFeedback = async (type: FeedbackType) => {
     setSubmitting(true);
     try {
-      await fetch(`/api/letters/${letterId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
+      await sendFeedback(letterId, type);
     } catch {
       // Feedback is non-critical; proceed even on failure
     } finally {
@@ -40,14 +37,14 @@ export default function FeedbackPrompt({
         </p>
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => sendFeedback("like")}
+            onClick={() => handleFeedback("like")}
             disabled={submitting}
             className="flex items-center justify-center gap-2 rounded-lg bg-success/10 px-4 py-2.5 text-sm font-medium text-success transition-colors hover:bg-success/20 disabled:opacity-60"
           >
             <span aria-hidden="true">&#128077;</span> Líkar
           </button>
           <button
-            onClick={() => sendFeedback("dislike")}
+            onClick={() => handleFeedback("dislike")}
             disabled={submitting}
             className="flex items-center justify-center gap-2 rounded-lg bg-error/10 px-4 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
           >

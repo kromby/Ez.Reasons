@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.Middleware;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ez.Reasons.Api.Middleware;
@@ -21,22 +22,11 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
             // Only protect moderation routes
             if (functionName is "GetPendingLetters" or "ApproveLetter" or "RejectLetter")
             {
-                // Check Authorization header first, then fall back to X-Auth-Token
-                // (SWA may strip the Authorization header from managed function requests)
-                var authHeader = requestData.Headers.TryGetValues("Authorization", out var values)
+                var token = requestData.Headers.TryGetValues("X-Auth-Token", out var values)
                     ? values.FirstOrDefault()
                     : null;
-                var customToken = requestData.Headers.TryGetValues("X-Auth-Token", out var customValues)
-                    ? customValues.FirstOrDefault()
-                    : null;
 
-                string? bearerToken = null;
-                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
-                    bearerToken = authHeader.Substring("Bearer ".Length);
-                else if (!string.IsNullOrEmpty(customToken))
-                    bearerToken = customToken;
-
-                if (string.IsNullOrEmpty(bearerToken))
+                if (string.IsNullOrEmpty(token))
                 {
                     var response = requestData.CreateResponse(HttpStatusCode.Unauthorized);
                     await response.WriteAsJsonAsync(new { error = "Unauthorized" });
@@ -44,7 +34,6 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
                     return;
                 }
 
-                var token = bearerToken;
                 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
 
                 try
@@ -58,7 +47,7 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
                         ValidateIssuer = false,
                         ValidateAudience = false,
                         ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero
+                        ClockSkew = TimeSpan.FromMinutes(5)
                     };
 
                     var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
@@ -72,8 +61,11 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
                     if (role != null)
                         context.Items["role"] = role;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    var logger = context.GetLogger<JwtMiddleware>();
+                    logger.LogError(ex, "JWT validation failed for function {FunctionName}", functionName);
+
                     var response = requestData.CreateResponse(HttpStatusCode.Unauthorized);
                     await response.WriteAsJsonAsync(new { error = "Invalid or expired token" });
                     context.GetInvocationResult().Value = response;

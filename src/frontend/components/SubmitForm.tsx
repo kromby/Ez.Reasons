@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { submitLetter } from "@/lib/api";
 
 interface SubmitFormProps {
   onSuccess: () => void;
@@ -45,20 +46,11 @@ export default function SubmitForm({ onSuccess }: SubmitFormProps) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/letters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          body: body.trim(),
-          email: email.trim() || undefined,
-        }),
+      await submitLetter({
+        title: title.trim(),
+        body: body.trim(),
+        email: email.trim() || undefined,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Villa kom upp við að senda bréf.");
-      }
 
       onSuccess();
     } catch (err) {

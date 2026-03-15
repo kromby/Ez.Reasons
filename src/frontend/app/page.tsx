@@ -3,13 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import LetterCard from "@/components/LetterCard";
 import FeedbackPrompt from "@/components/FeedbackPrompt";
-
-interface Letter {
-  id: string;
-  title: string;
-  body: string;
-  submittedAt: string;
-}
+import { fetchNextLetter, type Letter } from "@/lib/api";
 
 const SEEN_KEY = "ez-reasons-seen";
 
@@ -41,23 +35,14 @@ export default function HomePage() {
     setEmpty(false);
     try {
       const seenIds = getSeenIds();
-      const res = await fetch("/api/letters/next", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seenIds }),
-      });
+      const data = await fetchNextLetter(seenIds);
 
-      if (res.status === 404) {
+      if (!data) {
         setLetter(null);
         setEmpty(true);
         return;
       }
 
-      if (!res.ok) {
-        throw new Error("Failed to load letter");
-      }
-
-      const data: Letter = await res.json();
       setLetter(data);
       addSeenId(data.id);
     } catch {
