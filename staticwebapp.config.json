@@ -2,5 +2,11 @@
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/api/**", "/_next/**"]
-  }
+  },
+  "routes": [
+    {
+      "route": "/api/moderation/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ]
 }

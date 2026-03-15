@@ -16,16 +16,27 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
 
         if (requestData != null)
         {
-            var url = requestData.Url.AbsolutePath.ToLower();
+            var functionName = context.FunctionDefinition.Name;
 
             // Only protect moderation routes
-            if (url.StartsWith("/api/moderation"))
+            if (functionName is "GetPendingLetters" or "ApproveLetter" or "RejectLetter")
             {
+                // Check Authorization header first, then fall back to X-Auth-Token
+                // (SWA may strip the Authorization header from managed function requests)
                 var authHeader = requestData.Headers.TryGetValues("Authorization", out var values)
                     ? values.FirstOrDefault()
                     : null;
+                var customToken = requestData.Headers.TryGetValues("X-Auth-Token", out var customValues)
+                    ? customValues.FirstOrDefault()
+                    : null;
 
-                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                string? bearerToken = null;
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                    bearerToken = authHeader.Substring("Bearer ".Length);
+                else if (!string.IsNullOrEmpty(customToken))
+                    bearerToken = customToken;
+
+                if (string.IsNullOrEmpty(bearerToken))
                 {
                     var response = requestData.CreateResponse(HttpStatusCode.Unauthorized);
                     await response.WriteAsJsonAsync(new { error = "Unauthorized" });
@@ -33,7 +44,7 @@ public class JwtMiddleware : IFunctionsWorkerMiddleware
                     return;
                 }
 
-                var token = authHeader.Substring("Bearer ".Length);
+                var token = bearerToken;
                 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
 
                 try

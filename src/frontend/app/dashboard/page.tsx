@@ -30,7 +30,10 @@ export default function DashboardPage() {
     setError("");
     try {
       const res = await fetch("/api/moderation/pending", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Auth-Token": token!,
+        },
       });
 
       if (res.status === 401) {
@@ -66,7 +69,10 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/moderation/${id}/${action}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Auth-Token": token!,
+        },
       });
 
       if (res.status === 401) {
